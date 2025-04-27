@@ -11,6 +11,7 @@ class AlgorithmStep(BaseModel):
     comparison_indices: Optional[List[int]] = None
     swapped_indices: Optional[List[int]] = None
     description: str
+    step_type: str  # Uncommented this field to enable step-based highlighting
 
 class AlgorithmSteps(BaseModel):
     steps: List[AlgorithmStep]

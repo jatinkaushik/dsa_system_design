@@ -5,11 +5,12 @@ export interface SortingArray {
 
 export interface AlgorithmStep {
   array: number[];
-  current_index: number;
+  current_index: number | null;
   pivot_index?: number | null;
   comparison_indices?: number[] | null;
   swapped_indices?: number[] | null;
   description: string;
+  step_type?: string;
 }
 
 export interface AlgorithmSteps {

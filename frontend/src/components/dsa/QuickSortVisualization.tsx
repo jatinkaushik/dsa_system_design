@@ -1,330 +1,258 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import styled from 'styled-components';
-import axios from 'axios';
-import { AlgorithmStep, AlgorithmComplexity } from '../../types';
-import AnimationControls from '../common/AnimationControls.tsx';
-import ComplexityDisplay from '../common/ComplexityDisplay.tsx';
-import CodeDisplay from '../common/CodeDisplay.tsx';
-import InputControls from '../common/InputControls.tsx';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AlgorithmStep, AlgorithmSteps, AlgorithmComplexity } from '../../types';
+import { getQuickSortSteps, getAlgorithmComplexity } from '../../services/sortingService'; // Using mock service for now
+import InputControls from '../common/InputControls';
+import AnimationControls from '../common/AnimationControls';
+import CodeDisplay from '../common/CodeDisplay';
+import ComplexityDisplay from '../common/ComplexityDisplay';
+import { useLearningMode } from '../layout/Sidebar'; // Import the hook
+import KidFriendlyQuickSort from './KidFriendlyQuickSort'; // Import the kid-friendly component
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-`;
+// Import styled components - TEMPORARY: Ideally migrate these later
+import {
+  Container,
+  Title,
+  FlexContainer,
+  CodeExplanationSection,
+  VisualizationSection,
+  Visualization,
+  VisualizationHeader,
+  LoadingMessage
+} from '../../styles/components/dsa/QuickSortLayout.styles'; // Assuming layout styles are needed
+import {
+  ArrayContainer,
+  ArrayBar,
+  Legend,
+  LegendItem,
+  LegendColor
+} from '../../styles/components/dsa/QuickSortVisualization.styles'; // Assuming visualization styles are needed
 
-const Title = styled.h1`
-  margin-bottom: 1rem;
-`;
+// Mock code for display
+const quickSortCode = `
+function quickSort(arr, low, high) {
+  if (low < high) {
+    // pi is partitioning index, arr[pi] is now at right place
+    let pi = partition(arr, low, high);
 
-const Visualization = styled.div`
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
-  min-height: 300px;
-  display: flex;
-  flex-direction: column;
-`;
-
-const VisualizationHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-`;
-
-const StepDescription = styled.div`
-  background-color: #f8f9fa;
-  padding: 0.75rem;
-  border-radius: 4px;
-  border-left: 4px solid var(--primary-color);
-  margin-bottom: 1.5rem;
-  font-size: 1rem;
-`;
-
-const ArrayContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  height: 200px;
-  gap: 2px;
-  margin-top: 1rem;
-`;
-
-interface ArrayBarProps {
-  height: number;
-  isPivot: boolean;
-  isComparing: boolean;
-  isSwapping: boolean;
-  isSorted: boolean;
+    // Recursively sort elements before partition and after partition
+    quickSort(arr, low, pi - 1);
+    quickSort(arr, pi + 1, high);
+  }
 }
 
-const ArrayBar = styled.div<ArrayBarProps>`
-  flex: 1;
-  background-color: ${(props) => {
-    if (props.isPivot) return 'var(--highlight-color)';
-    if (props.isSwapping) return 'var(--error-color)';
-    if (props.isComparing) return 'var(--secondary-color)';
-    if (props.isSorted) return 'var(--success-color)';
-    return 'var(--primary-color)';
-  }};
-  height: ${(props) => `${props.height}%`};
-  border-radius: 2px 2px 0 0;
-  position: relative;
-  transition: all 0.3s ease;
-  
-  &::after {
-    content: attr(data-value);
-    position: absolute;
-    bottom: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.75rem;
-  }
-`;
+function partition(arr, low, high) {
+  // Choosing the last element as the pivot
+  let pivot = arr[high];
+  // Index of smaller element
+  let i = low - 1;
 
-const LoadingMessage = styled.div`
-  text-align: center;
-  padding: 2rem;
-  color: #666;
-`;
-
-// Sample QuickSort implementation code for display
-const quickSortCode = `function quickSort(arr) {
-  if (arr.length <= 1) {
-    return arr;
-  }
-  
-  const pivot = arr[arr.length - 1];
-  const left = [];
-  const right = [];
-  
-  // Partition the array
-  for (let i = 0; i < arr.length - 1; i++) {
-    if (arr[i] < pivot) {
-      left.push(arr[i]);
-    } else {
-      right.push(arr[i]);
+  for (let j = low; j < high; j++) {
+    // If current element is smaller than the pivot
+    if (arr[j] < pivot) {
+      i++;
+      // Swap arr[i] and arr[j]
+      [arr[i], arr[j]] = [arr[j], arr[i]];
     }
   }
-  
-  // Recursively sort the sub-arrays
-  return [...quickSort(left), pivot, ...quickSort(right)];
-}`;
+  // Swap arr[i+1] and arr[high] (or pivot)
+  [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+  return i + 1; // Return the partitioning index
+}
+`;
 
 const QuickSortVisualization: React.FC = () => {
-  const [array, setArray] = useState<number[]>([64, 34, 25, 12, 22, 11, 90]);
   const [steps, setSteps] = useState<AlgorithmStep[]>([]);
-  const [currentStep, setCurrentStep] = useState(0);
+  const [complexity, setComplexity] = useState<AlgorithmComplexity | null>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [complexity, setComplexity] = useState<AlgorithmComplexity>({
-    name: 'Quick Sort',
-    timeComplexity: {
-      best: 'O(n log n)',
-      average: 'O(n log n)',
-      worst: 'O(n²)'
-    },
-    spaceComplexity: {
-      best: 'O(log n)',
-      average: 'O(log n)',
-      worst: 'O(n)'
-    },
-    description: 'QuickSort is a divide-and-conquer algorithm that works by selecting a "pivot" element and partitioning the array around the pivot.'
-  });
-  
-  const animationRef = useRef<number | null>(null);
-  
-  const API_URL = 'http://localhost:8000/api';
-  
-  const fetchAlgorithmSteps = useCallback(async () => {
+  const [playbackSpeed, setPlaybackSpeed] = useState(1); // 1x speed
+  const [isLoading, setIsLoading] = useState(true);
+  const { learningMode } = useLearningMode(); // Get learning mode state
+  const [initialArray] = useState<number[]>([5, 2, 8, 1, 9, 4, 7, 3, 6]); // Store initial array separately
+
+  const generateSteps = useCallback((inputArray: number[]) => {
+    setIsLoading(true);
     try {
-      setLoading(true);
-      const response = await axios.post(`${API_URL}/algorithms/sort/quicksort`, {
-        array
-      });
-      setSteps(response.data.steps);
-      setCurrentStep(0);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching algorithm steps:', error);
-      setLoading(false);
-      // If the API call fails, generate a simple step for display
-      setSteps([
-        {
-          array: array,
-          current_index: 0,
-          pivot_index: null,
-          comparison_indices: null,
-          swapped_indices: null,
-          description: "API not available. Connect to the backend server to see the full visualization."
-        }
-      ]);
-    }
-  }, [array, API_URL]);
-  
-  const fetchComplexityData = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/algorithms/complexity/quicksort`);
-      setComplexity(response.data);
-    } catch (error) {
-      console.error('Error fetching complexity data:', error);
-      // Keep using the default complexity data
-    }
-  };
-  
-  useEffect(() => {
-    // Load the initial algorithm data
-    fetchAlgorithmSteps();
-    fetchComplexityData();
-    
-    // Store the ref in a variable inside the effect (not in the cleanup)
-    // so it's captured in the closure and doesn't change by the time cleanup runs
-    const currentAnimationRef = animationRef.current;
-    
-    return () => {
-      if (currentAnimationRef) {
-        cancelAnimationFrame(currentAnimationRef);
-      }
-    };
-  }, [fetchAlgorithmSteps]);
-  
-  const handleInputChange = (newArray: number[]) => {
-    setArray(newArray);
-    setIsPlaying(false);
-    
-    // Fetch new algorithm steps for the new array
-    setTimeout(() => {
-      fetchAlgorithmSteps();
-    }, 0);
-  };
-  
-  const handleGenerateRandom = () => {
-    // Generate a random array of 5-15 numbers between 1 and 100
-    const length = Math.floor(Math.random() * 11) + 5; // 5 to 15 elements
-    const randomArray = Array.from({ length }, () => Math.floor(Math.random() * 100) + 1);
-    
-    handleInputChange(randomArray);
-  };
-  
-  const handleStepForward = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
+      // In a real app, this would be an API call:
+      // const data = await apiService.fetchQuickSortSteps(inputArray);
+      // setSteps(data.steps);
+
+      // Using mock service:
+      const data: AlgorithmSteps = getQuickSortSteps(inputArray);
+      setSteps(data.steps);
+      setCurrentStepIndex(0);
       setIsPlaying(false);
+    } catch (error) {
+      console.error("Error generating QuickSort steps:", error);
+      setSteps([]); // Clear steps on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, []); // Removed dependencies as it doesn't depend on component state directly
+
+  const fetchComplexity = useCallback(() => {
+    try {
+      // In a real app, this would be an API call:
+      // const complexityData = await apiService.fetchAlgorithmComplexity('quicksort');
+      // setComplexity(complexityData);
+
+      // Using mock service:
+      const complexityData = getAlgorithmComplexity('quicksort');
+      setComplexity(complexityData);
+    } catch (error) {
+      console.error("Error fetching complexity data:", error);
+    }
+  }, []); // Removed dependencies as it doesn't depend on component state directly
+
+  // Initial data fetch - Run only once on mount
+  useEffect(() => {
+    generateSteps([...initialArray]); // Generate initial steps with initial array
+    fetchComplexity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generateSteps, fetchComplexity, initialArray]); // Include initialArray, generateSteps, fetchComplexity
+
+  // Animation effect
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    if (isPlaying && currentStepIndex < steps.length - 1) {
+      intervalId = setInterval(() => {
+        setCurrentStepIndex((prevIndex) => Math.min(prevIndex + 1, steps.length - 1));
+      }, 1000 / playbackSpeed); // Adjust interval based on speed
+    } else if (currentStepIndex === steps.length - 1) {
+      setIsPlaying(false); // Stop playing at the end
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isPlaying, currentStepIndex, steps.length, playbackSpeed]);
+
+  const handlePlayPause = () => {
+    if (currentStepIndex === steps.length - 1) {
+      // If at the end, reset and play
+      setCurrentStepIndex(0);
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(!isPlaying);
     }
   };
-  
-  const handleStepBackward = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
+
+  const handleStepBack = () => {
+    setIsPlaying(false);
+    setCurrentStepIndex((prevIndex) => Math.max(prevIndex - 1, 0));
   };
-  
+
+  const handleStepForward = () => {
+    setIsPlaying(false);
+    setCurrentStepIndex((prevIndex) => Math.min(prevIndex + 1, steps.length - 1));
+  };
+
+  const handleReset = () => {
+    setIsPlaying(false);
+    setCurrentStepIndex(0);
+  };
+
   const handleSpeedChange = (speed: number) => {
     setPlaybackSpeed(speed);
   };
-  
-  const handleReset = () => {
-    setIsPlaying(false);
-    setCurrentStep(0);
+
+  const handleInputChange = (input: number[]) => {
+    generateSteps([...input]); // Generate steps for the new array
   };
-  
-  // Animation effect
-  useEffect(() => {
-    if (!isPlaying || currentStep >= steps.length - 1) {
-      return;
+
+  const handleGenerateRandom = () => {
+    const randomArray = Array.from({ length: 10 }, () => Math.floor(Math.random() * 100) + 1);
+    generateSteps([...randomArray]);
+  };
+
+  const currentStep = steps[currentStepIndex];
+  const maxVal = Math.max(...(currentStep?.array || [1])); // Avoid division by zero
+
+  // Determine highlighted lines based on step type (example logic)
+  const getHighlightLines = (stepType?: string): number[] => {
+    switch (stepType) {
+      case 'initial': return [1, 2, 3, 4, 5, 6, 7, 8];
+      case 'choosing_pivot': return [12, 13];
+      case 'comparing': return [17, 18, 19];
+      case 'swapping': return [21, 22, 23];
+      case 'placing_pivot': return [26, 27];
+      case 'recursive_left': return [6];
+      case 'recursive_right': return [7];
+      case 'sorted': return [];
+      default: return [];
     }
-    
-    const animate = () => {
-      setCurrentStep((prev) => {
-        if (prev < steps.length - 1) {
-          return prev + 1;
-        } else {
-          setIsPlaying(false);
-          return prev;
-        }
-      });
-    };
-    
-    // Calculate delay based on playback speed
-    const delay = 1000 / playbackSpeed;
-    const timeout = setTimeout(animate, delay);
-    
-    return () => clearTimeout(timeout);
-  }, [isPlaying, currentStep, steps.length, playbackSpeed]);
-  
-  const calculateBarHeight = (value: number) => {
-    const maxValue = Math.max(...steps[currentStep].array);
-    return (value / maxValue) * 100;
   };
-  
+
+  if (learningMode) {
+    // Pass necessary props if KidFriendlyQuickSort needs them
+    return <KidFriendlyQuickSort />; // Render kid-friendly version if mode is active
+  }
+
   return (
     <Container>
-      <Title>Quick Sort Visualization</Title>
-      
-      <InputControls 
-        onInputChange={handleInputChange}
-        onGenerateRandom={handleGenerateRandom}
-      />
-      
-      {loading ? (
+      <Title className="text-3xl font-bold mb-6 text-gray-800">Quick Sort Visualization</Title> {/* Added Tailwind classes */}
+
+      <InputControls onInputChange={handleInputChange} onGenerateRandom={handleGenerateRandom} />
+
+      {isLoading ? (
         <LoadingMessage>Loading visualization...</LoadingMessage>
+      ) : !currentStep ? (
+        <LoadingMessage>No steps available. Please check input or algorithm.</LoadingMessage>
       ) : (
         <>
-          <AnimationControls
-            isPlaying={isPlaying}
-            currentStep={currentStep}
-            totalSteps={steps.length}
-            speed={playbackSpeed}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onStepForward={handleStepForward}
-            onStepBackward={handleStepBackward}
-            onSpeedChange={handleSpeedChange}
-            onReset={handleReset}
-          />
-          
-          <Visualization>
-            <VisualizationHeader>
-              <h2>Array Visualization</h2>
-            </VisualizationHeader>
-            
-            {steps.length > 0 && (
-              <>
-                <StepDescription>
-                  {steps[currentStep].description}
-                </StepDescription>
-                
+          <FlexContainer>
+            <CodeExplanationSection>
+              <CodeDisplay
+                code={quickSortCode}
+                language="javascript"
+                highlightLines={getHighlightLines(currentStep.step_type)}
+                currentStep={currentStepIndex}
+                codeExplanation={currentStep.description} // Pass description here
+              />
+            </CodeExplanationSection>
+
+            <VisualizationSection>
+              <Visualization>
+                <VisualizationHeader>
+                  <h2 className="text-xl font-semibold text-gray-700">Visualization</h2> {/* Added Tailwind classes */}
+                  <AnimationControls
+                    isPlaying={isPlaying}
+                    onPlayPause={handlePlayPause}
+                    onStepBack={handleStepBack}
+                    onStepForward={handleStepForward}
+                    onReset={handleReset}
+                    playbackSpeed={playbackSpeed}
+                    onSpeedChange={handleSpeedChange}
+                    currentStep={currentStepIndex}
+                    totalSteps={steps.length}
+                  />
+                </VisualizationHeader>
+
                 <ArrayContainer>
-                  {steps[currentStep].array.map((value, index) => {
-                    const isPivot = steps[currentStep].pivot_index === index;
-                    const isComparing = steps[currentStep].comparison_indices?.includes(index) || false;
-                    const isSwapping = steps[currentStep].swapped_indices?.includes(index) || false;
-                    const isSorted = currentStep === steps.length - 1;
-                    
-                    return (
-                      <ArrayBar
-                        key={index}
-                        height={calculateBarHeight(value)}
-                        isPivot={isPivot}
-                        isComparing={isComparing}
-                        isSwapping={isSwapping}
-                        isSorted={isSorted}
-                        data-value={value}
-                      />
-                    );
-                  })}
+                  {currentStep.array.map((value, index) => (
+                    <ArrayBar
+                      key={index}
+                      data-value={value} // Show value below bar
+                      height={(value / maxVal) * 100}
+                      isPivot={index === currentStep.pivot_index}
+                      isComparing={currentStep.comparison_indices?.includes(index) ?? false}
+                      isSwapping={currentStep.swapped_indices?.includes(index) ?? false}
+                      // Add isSorted state if backend provides it, or derive if possible
+                      isSorted={currentStep.step_type === 'sorted'}
+                    />
+                  ))}
                 </ArrayContainer>
-              </>
-            )}
-          </Visualization>
-          
-          <ComplexityDisplay complexity={complexity} />
-          
-          <CodeDisplay code={quickSortCode} language="javascript" />
+                <Legend>
+                  <LegendItem><LegendColor color="var(--primary-color)" /> Default</LegendItem>
+                  <LegendItem><LegendColor color="var(--highlight-color)" /> Pivot</LegendItem>
+                  <LegendItem><LegendColor color="var(--secondary-color)" /> Comparing</LegendItem>
+                  <LegendItem><LegendColor color="var(--error-color)" /> Swapping</LegendItem>
+                  <LegendItem><LegendColor color="var(--success-color)" /> Sorted</LegendItem>
+                </Legend>
+              </Visualization>
+              {complexity && <ComplexityDisplay complexity={complexity} />} {/* Moved below visualization */}
+            </VisualizationSection>
+          </FlexContainer>
         </>
       )}
     </Container>

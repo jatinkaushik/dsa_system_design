@@ -1,135 +1,106 @@
 import React from 'react';
-import styled from 'styled-components';
 
 interface AnimationControlsProps {
   isPlaying: boolean;
+  onPlayPause: () => void;
+  onStepBack: () => void;
+  onStepForward: () => void;
+  onReset: () => void;
+  playbackSpeed: number;
+  onSpeedChange: (speed: number) => void;
   currentStep: number;
   totalSteps: number;
-  speed: number;
-  onPlay: () => void;
-  onPause: () => void;
-  onStepForward: () => void;
-  onStepBackward: () => void;
-  onSpeedChange: (speed: number) => void;
-  onReset: () => void;
 }
-
-const ControlsContainer = styled.div`
-  display: flex;
-  align-items: center;
-  background-color: white;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1rem;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 0.5rem;
-`;
-
-const Button = styled.button`
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.5rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  font-size: 1.2rem;
-  
-  &:hover {
-    background-color: #3a5a84;
-  }
-  
-  &:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-  }
-`;
-
-const SpeedControl = styled.div`
-  display: flex;
-  align-items: center;
-  margin-left: 1rem;
-  gap: 0.5rem;
-`;
-
-const SpeedLabel = styled.label`
-  font-size: 0.9rem;
-  color: #555;
-`;
-
-const SpeedSelect = styled.select`
-  padding: 0.3rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-`;
-
-const ProgressInfo = styled.div`
-  margin-left: auto;
-  font-size: 0.9rem;
-  color: #555;
-`;
 
 const AnimationControls: React.FC<AnimationControlsProps> = ({
   isPlaying,
-  currentStep,
-  totalSteps,
-  speed,
-  onPlay,
-  onPause,
+  onPlayPause,
+  onStepBack,
   onStepForward,
-  onStepBackward,
+  onReset,
+  playbackSpeed,
   onSpeedChange,
-  onReset
+  currentStep,
+  totalSteps
 }) => {
-  const handleSpeedChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onSpeedChange(parseFloat(e.target.value));
-  };
-  
   return (
-    <ControlsContainer>
-      <ButtonGroup>
-        <Button onClick={onReset} title="Reset">
-          ⟲
-        </Button>
-        <Button onClick={onStepBackward} disabled={currentStep === 0} title="Step Backward">
-          ⟨
-        </Button>
-        {isPlaying ? (
-          <Button onClick={onPause} title="Pause">
-            ⏸️
-          </Button>
-        ) : (
-          <Button onClick={onPlay} disabled={currentStep === totalSteps - 1} title="Play">
-            ▶️
-          </Button>
-        )}
-        <Button onClick={onStepForward} disabled={currentStep === totalSteps - 1} title="Step Forward">
-          ⟩
-        </Button>
-      </ButtonGroup>
+    <div className="flex flex-col gap-2 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="flex justify-between items-center">
+        <div className="font-medium text-sm text-gray-700">Animation Controls</div>
+        <div className="text-xs text-gray-500">Step {currentStep + 1} of {totalSteps}</div>
+      </div>
       
-      <SpeedControl>
-        <SpeedLabel>Speed:</SpeedLabel>
-        <SpeedSelect value={speed} onChange={handleSpeedChange}>
-          <option value="0.5">0.5x</option>
-          <option value="1">1x</option>
-          <option value="2">2x</option>
-          <option value="4">4x</option>
-        </SpeedSelect>
-      </SpeedControl>
+      <div className="flex items-center gap-2 mt-1">
+        <button 
+          onClick={onReset}
+          className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+          title="Reset"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 2v6h6"></path>
+            <path d="M3 13a9 9 0 1 0 3-7.7L3 8"></path>
+          </svg>
+        </button>
+        
+        <button 
+          onClick={onStepBack}
+          className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+          title="Step Back"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        
+        <button 
+          onClick={onPlayPause}
+          className="p-2 bg-primary text-white rounded hover:bg-primary-dark transition-colors"
+          title={isPlaying ? "Pause" : "Play"}
+        >
+          {isPlaying ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="6" y="4" width="4" height="16"></rect>
+              <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+          )}
+        </button>
+        
+        <button 
+          onClick={onStepForward}
+          className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+          title="Step Forward"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+        
+        <div className="ml-4 flex items-center gap-2">
+          <span className="text-xs text-gray-500">Speed:</span>
+          <select 
+            value={playbackSpeed} 
+            onChange={(e) => onSpeedChange(Number(e.target.value))}
+            className="border border-gray-300 rounded text-xs p-1"
+          >
+            <option value={0.5}>0.5x</option>
+            <option value={1}>1x</option>
+            <option value={1.5}>1.5x</option>
+            <option value={2}>2x</option>
+          </select>
+        </div>
+      </div>
       
-      <ProgressInfo>
-        Step {currentStep + 1} of {totalSteps}
-      </ProgressInfo>
-    </ControlsContainer>
+      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+        <div 
+          className="bg-primary h-1.5 rounded-full transition-all duration-300 ease-in-out" 
+          style={{ width: `${(currentStep / (totalSteps - 1)) * 100}%` }}
+        ></div>
+      </div>
+    </div>
   );
 };
 

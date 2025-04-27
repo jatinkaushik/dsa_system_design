@@ -1,25 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 
-// Layout components
-import Header from './components/layout/Header.tsx';
-import Sidebar from './components/layout/Sidebar.tsx';
-import Footer from './components/layout/Footer.tsx';
-
-// Page components
-import Dashboard from './components/Dashboard.tsx';
-import DailyReview from './components/DailyReview.tsx';
-import QuickSortVisualization from './components/dsa/QuickSortVisualization.tsx';
-import URLShortenerDesign from './components/systemDesign/URLShortenerDesign.tsx';
+// Components - Using relative imports to fix path resolution issues
+import Dashboard from './components/Dashboard';
+import DailyReview from './components/DailyReview';
+import QuickSortVisualization from './components/dsa/QuickSortVisualization';
+import URLShortenerDesign from './components/systemDesign/URLShortenerDesign';
+import Header from './components/layout/Header';
+import Sidebar from './components/layout/Sidebar';
+import Footer from './components/layout/Footer';
 
 const App: React.FC = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
+
   return (
     <Router>
       <div className="app">
-        <Header />
+        <Header toggleSidebar={toggleSidebar} />
         <div className="main-container">
-          <Sidebar />
+          <Sidebar isOpen={sidebarOpen} closeSidebar={closeSidebar} />
           <main className="content">
             <Routes>
               <Route path="/" element={<Dashboard />} />
