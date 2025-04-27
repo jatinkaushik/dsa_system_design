@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useLearningMode } from '../../App'; // Import hook from App
+import Link from 'next/link'; // Import Link from next/link
+import { usePathname } from 'next/navigation'; // Import usePathname from next/navigation
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState } from '../../store';
+import { toggleLearningMode } from '../../store/learningModeSlice';
 import { sidebarItems, groupItemsByTag, SidebarItem } from '../../config/sidebarData'; // Import from .ts file
 import { SortIcon, LinkIcon } from '../../config/icons'; // Import icons
 
@@ -19,7 +22,7 @@ const getIcon = (iconType?: string) => {
 // Define a reusable component for rendering sidebar links
 const SidebarLink: React.FC<{ item: SidebarItem; isActive: boolean }> = ({ item, isActive }) => (
   <Link
-    to={item.path}
+    href={item.path} // Use href instead of to
     className={`flex items-center py-2.5 pl-10 pr-6 text-text-primary no-underline transition-all duration-fast rounded-r-lg relative font-medium gap-3 hover:bg-primary/10 hover:text-primary ${isActive ? "bg-primary/15 text-primary font-semibold" : ""}`}
   >
     {item.iconType && <span className="absolute left-4 top-1/2 -translate-y-1/2">{getIcon(item.iconType)}</span>}
@@ -56,14 +59,15 @@ const TagGroup: React.FC<{ tag: string; items: SidebarItem[]; activePath: string
 };
 
 const Sidebar: React.FC<{isOpen: boolean; closeSidebar: () => void}> = ({ isOpen, closeSidebar }) => {
-  const location = useLocation();
-  const { learningMode, toggleLearningMode } = useLearningMode(); // Use hook from App
+  const pathname = usePathname();
+  const dispatch = useDispatch();
+  const learningMode = useSelector((state: RootState) => state.learningMode.learningMode);
 
   useEffect(() => {
     if (window.innerWidth <= 768) {
       closeSidebar();
     }
-  }, [location.pathname, closeSidebar]);
+  }, [pathname, closeSidebar]);
 
   // Filter and group items with explicit types
   const algorithmItems = sidebarItems.filter((item: SidebarItem) => item.type === 'algorithm');
@@ -87,38 +91,16 @@ const Sidebar: React.FC<{isOpen: boolean; closeSidebar: () => void}> = ({ isOpen
       <aside
         className={`w-[280px] bg-surface border-r border-border h-full transition-all duration-normal shadow-sm overflow-y-auto py-6 tablet:fixed tablet:top-12 tablet:h-[calc(100%-48px)] tablet:z-90 ${isOpen ? 'tablet:left-0 tablet:shadow-lg' : 'tablet:left-[-280px] tablet:shadow-none'}`}
       >
-        {/* Learning Mode Toggle */}
-        <div className="px-6 mb-6">
-          <div
-            className={`flex items-center justify-between ${learningMode ? 'bg-primary/10 border border-primary/30' : 'bg-black/[0.03] border border-transparent'} p-3 rounded-lg transition-all duration-fast cursor-pointer hover:bg-primary/15`}
-            onClick={toggleLearningMode} // Ensure onClick is present
-          >
-            <div className="flex items-center gap-3">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
-              </svg>
-              <div>
-                <div className="font-medium text-sm">Learning Mode</div>
-                <div className="text-xs text-text-secondary mt-1">Kid-friendly explanations</div>
-              </div>
-            </div>
-            <div className={`relative w-9 h-5 rounded-full transition-all duration-fast`}>
-              <div className={`absolute w-4 h-4 bg-white rounded-full top-0.5 transition-all duration-fast shadow-sm`}></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Algorithms Section - Fix TypeScript type issues */}
+        {/* Algorithms Section - Pass pathname */}
         <div className="text-sm text-text-primary font-semibold uppercase tracking-wide px-6 mb-3">Algorithms</div>
         {Object.entries(groupedAlgos as GroupedMap).map(([tag, items]) => (
-          <TagGroup key={tag} tag={tag} items={items} activePath={location.pathname} />
+          <TagGroup key={tag} tag={tag} items={items} activePath={pathname} />
         ))}
 
-        {/* System Design Section - Fix TypeScript type issues */}
+        {/* System Design Section - Pass pathname */}
         <div className="text-sm text-text-primary font-semibold uppercase tracking-wide px-6 mb-3 mt-6">System Design</div>
         {Object.entries(groupedSysDesign as GroupedMap).map(([tag, items]) => (
-          <TagGroup key={tag} tag={tag} items={items} activePath={location.pathname} />
+          <TagGroup key={tag} tag={tag} items={items} activePath={pathname} />
         ))}
 
         {/* Profile Section */}
@@ -127,6 +109,13 @@ const Sidebar: React.FC<{isOpen: boolean; closeSidebar: () => void}> = ({ isOpen
           <div>
             <div className="font-medium text-sm">User</div>
             <div className="text-xs text-text-secondary">Developer</div>
+            {/* Example toggle for learning mode using Redux */}
+            <button
+              className={`mt-2 px-3 py-1 rounded text-xs font-medium ${learningMode ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700'}`}
+              onClick={() => dispatch(toggleLearningMode())}
+            >
+              {learningMode ? 'Learning Mode: ON' : 'Learning Mode: OFF'}
+            </button>
           </div>
         </div>
       </aside>

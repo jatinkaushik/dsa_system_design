@@ -1,5 +1,7 @@
+'use client';
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 const Dashboard: React.FC = () => {
   // Mock data for items due for review - commented out until used
@@ -17,7 +19,7 @@ const Dashboard: React.FC = () => {
           and system design through visual learning and spaced repetition.
         </p>
         <Link
-          to="/daily-review"
+          href="/daily-review"
           className="inline-flex items-center gap-2 bg-white text-primary py-3 px-7 rounded-full font-semibold text-base transition-all duration-normal shadow-md hover:-translate-y-1 hover:shadow-lg mobile:w-full mobile:justify-center mobile:py-3 mobile:px-4 mobile:text-sm"
         >
           Start Daily Review

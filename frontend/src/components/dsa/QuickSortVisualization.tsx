@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlgorithmStep, AlgorithmSteps, AlgorithmComplexity } from '../../types';
-import { getQuickSortSteps, getAlgorithmComplexity } from '../../services/sortingService'; // Using mock service for now
+import { AlgorithmStep, AlgorithmSteps, AlgorithmComplexity as AlgorithmComplexityType } from '../../types';
+import { getQuickSortSteps, getAlgorithmComplexity } from '../../services/sortingService';
 import InputControls from '../common/InputControls';
 import AnimationControls from '../common/AnimationControls';
 import CodeDisplay from '../common/CodeDisplay';
 import ComplexityDisplay from '../common/ComplexityDisplay';
-import { useLearningMode } from '../../App'; // Corrected import path for the hook
-import KidFriendlyQuickSort from './KidFriendlyQuickSort'; // Import the kid-friendly component
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store';
+import KidFriendlyQuickSort from './KidFriendlyQuickSort';
+import AlgorithmBox from '../common/AlgorithmBox';
+import AlgorithmVisualization from '../common/AlgorithmVisualization';
+import AlgorithmComplexity from '../common/AlgorithmComplexity';
 
 // Import styled components - TEMPORARY: Ideally migrate these later
 import {
@@ -62,12 +66,12 @@ function partition(arr, low, high) {
 
 const QuickSortVisualization: React.FC = () => {
   const [steps, setSteps] = useState<AlgorithmStep[]>([]);
-  const [complexity, setComplexity] = useState<AlgorithmComplexity | null>(null);
+  const [complexity, setComplexity] = useState<AlgorithmComplexityType | null>(null); // Use the renamed type
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1); // 1x speed
   const [isLoading, setIsLoading] = useState(true);
-  const { learningMode } = useLearningMode(); // Get learning mode state
+  const learningMode = useSelector((state: RootState) => state.learningMode.learningMode);
   const [currentArray, setCurrentArray] = useState<number[]>([5, 8, 1, 9, 7, 3]); // Store current array separately
 
   const generateSteps = useCallback((inputArray: number[]) => {
@@ -204,73 +208,72 @@ const QuickSortVisualization: React.FC = () => {
   }
 
   return (
-    <Container>
-      <Title className="text-3xl font-bold mb-6 text-gray-800">Quick Sort Visualization</Title> {/* Added Tailwind classes */}
-
+    <AlgorithmBox
+      title="Quick Sort"
+      description="Quick Sort is a divide-and-conquer algorithm that sorts by partitioning arrays."
+    >
       <InputControls onInputChange={handleInputChange} onGenerateRandom={handleGenerateRandom} />
-
       {isLoading ? (
         <LoadingMessage>Loading visualization...</LoadingMessage>
       ) : !currentStep ? (
         <LoadingMessage>No steps available. Please check input or algorithm.</LoadingMessage>
       ) : (
-        <>
-          <FlexContainer>
-            <CodeExplanationSection>
-              <CodeDisplay
-                code={quickSortCode}
-                language="javascript"
-                highlightLines={getHighlightLines(currentStep.step_type)}
-                currentStep={currentStepIndex}
-                codeExplanation={currentStep.description} // Pass description here
-              />
-            </CodeExplanationSection>
-
-            <VisualizationSection>
-              <Visualization>
-                <VisualizationHeader>
-                  <h2 className="text-xl font-semibold text-gray-700">Visualization</h2> {/* Added Tailwind classes */}
-                  <AnimationControls
-                    isPlaying={isPlaying}
-                    onPlayPause={handlePlayPause}
-                    onStepBack={handleStepBack}
-                    onStepForward={handleStepForward}
-                    onReset={handleReset}
-                    playbackSpeed={playbackSpeed}
-                    onSpeedChange={handleSpeedChange}
-                    currentStep={currentStepIndex}
-                    totalSteps={steps.length}
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex-1">
+            <CodeDisplay
+              code={quickSortCode}
+              language="javascript"
+              highlightLines={getHighlightLines(currentStep.step_type)}
+              currentStep={currentStepIndex}
+              codeExplanation={currentStep.description}
+            />
+          </div>
+          <div className="flex-1">
+            <AlgorithmVisualization label="Visualization">
+              <VisualizationHeader>
+                <AnimationControls
+                  isPlaying={isPlaying}
+                  onPlayPause={handlePlayPause}
+                  onStepBack={handleStepBack}
+                  onStepForward={handleStepForward}
+                  onReset={handleReset}
+                  playbackSpeed={playbackSpeed}
+                  onSpeedChange={handleSpeedChange}
+                  currentStep={currentStepIndex}
+                  totalSteps={steps.length}
+                />
+              </VisualizationHeader>
+              <ArrayContainer>
+                {currentStep.array.map((value, index) => (
+                  <ArrayBar
+                    key={index}
+                    data-value={value}
+                    height={(value / maxVal) * 100}
+                    isPivot={index === currentStep.pivot_index}
+                    isComparing={currentStep.comparison_indices?.includes(index) ?? false}
+                    isSwapping={currentStep.swapped_indices?.includes(index) ?? false}
+                    isSorted={currentStep.step_type === 'sorted'}
                   />
-                </VisualizationHeader>
-
-                <ArrayContainer>
-                  {currentStep.array.map((value, index) => (
-                    <ArrayBar
-                      key={index}
-                      data-value={value} // Show value below bar
-                      height={(value / maxVal) * 100}
-                      isPivot={index === currentStep.pivot_index}
-                      isComparing={currentStep.comparison_indices?.includes(index) ?? false}
-                      isSwapping={currentStep.swapped_indices?.includes(index) ?? false}
-                      // Add isSorted state if backend provides it, or derive if possible
-                      isSorted={currentStep.step_type === 'sorted'}
-                    />
-                  ))}
-                </ArrayContainer>
-                <Legend>
-                  <LegendItem><LegendColor color="var(--primary-color)" /> Default</LegendItem>
-                  <LegendItem><LegendColor color="var(--highlight-color)" /> Pivot</LegendItem>
-                  <LegendItem><LegendColor color="var(--secondary-color)" /> Comparing</LegendItem>
-                  <LegendItem><LegendColor color="var(--error-color)" /> Swapping</LegendItem>
-                  <LegendItem><LegendColor color="var(--success-color)" /> Sorted</LegendItem>
-                </Legend>
-              </Visualization>
-              {complexity && <ComplexityDisplay complexity={complexity} />} {/* Moved below visualization */}
-            </VisualizationSection>
-          </FlexContainer>
-        </>
+                ))}
+              </ArrayContainer>
+              <Legend>
+                <LegendItem><LegendColor color="var(--primary-color)" /> Default</LegendItem>
+                <LegendItem><LegendColor color="var(--highlight-color)" /> Pivot</LegendItem>
+                <LegendItem><LegendColor color="var(--secondary-color)" /> Comparing</LegendItem>
+                <LegendItem><LegendColor color="var(--error-color)" /> Swapping</LegendItem>
+                <LegendItem><LegendColor color="var(--success-color)" /> Sorted</LegendItem>
+              </Legend>
+            </AlgorithmVisualization>
+            {complexity && (
+              <AlgorithmComplexity 
+                time={`Best: ${complexity.timeComplexity.best}, Average: ${complexity.timeComplexity.average}, Worst: ${complexity.timeComplexity.worst}`}
+                space={`Best: ${complexity.spaceComplexity.best}, Average: ${complexity.spaceComplexity.average}, Worst: ${complexity.spaceComplexity.worst}`}
+              />
+            )}
+          </div>
+        </div>
       )}
-    </Container>
+    </AlgorithmBox>
   );
 };
 
