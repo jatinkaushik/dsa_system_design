@@ -5,7 +5,7 @@ import InputControls from '../common/InputControls';
 import AnimationControls from '../common/AnimationControls';
 import CodeDisplay from '../common/CodeDisplay';
 import ComplexityDisplay from '../common/ComplexityDisplay';
-import { useLearningMode } from '../layout/Sidebar'; // Import the hook
+import { useLearningMode } from '../../App'; // Corrected import path for the hook
 import KidFriendlyQuickSort from './KidFriendlyQuickSort'; // Import the kid-friendly component
 
 // Import styled components - TEMPORARY: Ideally migrate these later
@@ -68,7 +68,7 @@ const QuickSortVisualization: React.FC = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1); // 1x speed
   const [isLoading, setIsLoading] = useState(true);
   const { learningMode } = useLearningMode(); // Get learning mode state
-  const [initialArray] = useState<number[]>([5, 2, 8, 1, 9, 4, 7, 3, 6]); // Store initial array separately
+  const [currentArray, setCurrentArray] = useState<number[]>([5, 8, 1, 9, 7, 3]); // Store current array separately
 
   const generateSteps = useCallback((inputArray: number[]) => {
     setIsLoading(true);
@@ -78,17 +78,18 @@ const QuickSortVisualization: React.FC = () => {
       // setSteps(data.steps);
 
       // Using mock service:
-      const data: AlgorithmSteps = getQuickSortSteps(inputArray);
+      const data: AlgorithmSteps = getQuickSortSteps([...inputArray]); // Use a copy
       setSteps(data.steps);
       setCurrentStepIndex(0);
       setIsPlaying(false);
+      setCurrentArray(inputArray); // Update the current array state
     } catch (error) {
       console.error("Error generating QuickSort steps:", error);
       setSteps([]); // Clear steps on error
     } finally {
       setIsLoading(false);
     }
-  }, []); // Removed dependencies as it doesn't depend on component state directly
+  }, []);
 
   const fetchComplexity = useCallback(() => {
     try {
@@ -106,10 +107,10 @@ const QuickSortVisualization: React.FC = () => {
 
   // Initial data fetch - Run only once on mount
   useEffect(() => {
-    generateSteps([...initialArray]); // Generate initial steps with initial array
+    generateSteps(currentArray); // Generate initial steps with initial array
     fetchComplexity();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [generateSteps, fetchComplexity, initialArray]); // Include initialArray, generateSteps, fetchComplexity
+  }, [fetchComplexity]); // Only fetchComplexity is a dependency here, generateSteps is called manually
 
   // Animation effect
   useEffect(() => {
@@ -150,6 +151,8 @@ const QuickSortVisualization: React.FC = () => {
   const handleReset = () => {
     setIsPlaying(false);
     setCurrentStepIndex(0);
+    // Optionally, reset to the initial array if desired, or keep the current one
+    // generateSteps(initialArray);
   };
 
   const handleSpeedChange = (speed: number) => {
@@ -184,8 +187,20 @@ const QuickSortVisualization: React.FC = () => {
   };
 
   if (learningMode) {
-    // Pass necessary props if KidFriendlyQuickSort needs them
-    return <KidFriendlyQuickSort />; // Render kid-friendly version if mode is active
+    // Pass necessary props to KidFriendlyQuickSort
+    return (
+      <KidFriendlyQuickSort
+        steps={steps}
+        currentStep={currentStepIndex}
+        isPlaying={isPlaying}
+        playbackSpeed={playbackSpeed} // Pass playbackSpeed state
+        handleNext={handleStepForward}
+        handleBack={handleStepBack}
+        handlePlay={handlePlayPause}
+        handleReset={handleReset}
+        onSpeedChange={handleSpeedChange} // Pass speed change handler
+      />
+    );
   }
 
   return (

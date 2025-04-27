@@ -157,3 +157,21 @@ export const FeedbackMessage = styled.div<{isCorrect?: boolean, show?: boolean}>
   color: ${props => props.isCorrect ? '#2E7D32' : '#C62828'};
   display: ${props => props.show ? 'block' : 'none'};
 `;
+
+// New styled component for speed control buttons
+export const SpeedControlButton = styled.button<{ active?: boolean }>`
+  padding: 6px 12px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 2px solid ${props => props.active ? '#77DD77' : '#AEC6CF'};
+  background-color: ${props => props.active ? '#E8F5E9' : 'white'};
+  color: ${props => props.active ? '#2E7D32' : '#555'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: ${props => props.active ? 'bold' : 'normal'};
+
+  &:hover {
+    border-color: #77DD77;
+    background-color: #F0FFF0;
+  }
+`;
